@@ -100,7 +100,7 @@ claude --version
 
 ```bash
 cd cortex-memory
-python3 scripts/init_db.py
+python3 init_db.py
 ```
 
 This creates `~/.my-memory/my-memories.db` with required tables.
@@ -109,7 +109,7 @@ This creates `~/.my-memory/my-memories.db` with required tables.
 
 ```bash
 # Test retrieval (should return empty results if no data)
-python3 scripts/retrieve_memory.py --query "test"
+python3 skills/retrieve-memory/scripts/retrieve_memory.py --query "test"
 ```
 
 ---
@@ -234,7 +234,7 @@ ollama ps
 
 Database not initialized:
 ```bash
-python3 scripts/init_db.py
+python3 init_db.py
 ```
 
 **Error: `database is locked`**
@@ -282,13 +282,13 @@ EOF
 ### 2. Summarize to Database
 
 ```bash
-python3 scripts/summarize_day.py --date $(date +%Y-%m-%d)
+python3 skills/extract-memory/scripts/summarize_day.py --date $(date +%Y-%m-%d)
 ```
 
 ### 3. Search
 
 ```bash
-python3 scripts/retrieve_memory.py --query "cortex setup"
+python3 skills/retrieve-memory/scripts/retrieve_memory.py --query "cortex setup"
 ```
 
 ---

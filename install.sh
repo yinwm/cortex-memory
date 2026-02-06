@@ -97,7 +97,7 @@ echo -e "${GREEN}✅ Created $MEMORY_DIR${NC}"
 # 9. Initialize database
 echo ""
 echo "💾 Initializing database..."
-python3 scripts/init_db.py
+python3 init_db.py
 echo -e "${GREEN}✅ Database initialized${NC}"
 
 # 10. Test installation
@@ -122,10 +122,10 @@ echo "1. Create a daily note:"
 echo "   vim ~/.my-memory/2026-02/2026-02-05.md"
 echo ""
 echo "2. Summarize to long-term memory:"
-echo "   python3 scripts/summarize_day.py --date 2026-02-05"
+echo "   python3 skills/extract-memory/scripts/summarize_day.py --date 2026-02-05"
 echo ""
 echo "3. Search your memories:"
-echo "   python3 scripts/retrieve_memory.py --query \"your search\""
+echo "   python3 skills/retrieve-memory/scripts/retrieve_memory.py --query \"your search\""
 echo ""
 echo "📖 Documentation: docs/INSTALL.md"
 echo "🤖 Agent examples: examples/"

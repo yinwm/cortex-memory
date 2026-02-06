@@ -16,6 +16,17 @@ from pathlib import Path
 from datetime import datetime
 import sqlite_vec
 
+# Add script dir to sys.path to import claude_stream
+script_dir = Path(__file__).parent.resolve()
+sys.path.append(str(script_dir))
+
+try:
+    from claude_stream import run_claude_stream
+except ImportError as e:
+    print(f"⚠️  Warning: Could not import claude_stream: {e}")
+    print("   Falling back to basic subprocess mode")
+    run_claude_stream = None
+
 # Configuration
 MEMORY_DIR = Path.home() / ".my-memory"
 DB_PATH = MEMORY_DIR / "my-memories.db"
@@ -101,52 +112,83 @@ Your goal is to analyze the day's memory entries and extract what's worth storin
 # Today's Memory Entries:
 {entries_text}
 
-# Instructions:
-1. **IDENTIFY** which entries contain long-term value:
-   - ✅ Important decisions and insights
-   - ✅ Knowledge worth retaining
-   - ✅ Action items or tasks
-   - ❌ Temporary noise or trivial thoughts
+# Step 1: CLUSTER - Group related entries
+Identify entries that are related and group them. Examples:
+- Multiple entries about the same system/project → Group them
+- Entries describing different aspects of a decision → Group them
+- Temporary details + higher-level summary → Keep only the summary
 
-2. **For each valuable entry, provide**:
-   - type: free-form label (e.g., "sqlite-vec安装", "系统架构", "Bug修复")
-   - summary: concise 1-2 sentence summary
-   - importance: score 0-1 (how important is this?)
-   - tags: array of relevant tags (e.g., ["#tech", "#sqlite", "#database"])
+# Step 2: FILTER - Apply long-term value criteria
+For each group (or single entry), evaluate using these THREE criteria:
 
-3. **OUTPUT FORMAT**: Return a JSON array:
+**ALL THREE must be satisfied to save:**
+
+| Criterion | Question | Pass/Fail |
+|-----------|----------|-----------|
+| **可复用性** | 3个月后回头看还有用吗？ | ✅/❌ |
+| **行业知识** | 是否包含业务/行业理解？ | ✅/❌ |
+| **信息密度** | 有背景/原因/方法论，不只是"要做某事"？ | ✅/❌ |
+
+**Exclude (视为临时信息):**
+- ❌ 纯粹的待办动作（"调研X"、"联系Y"、"明天开会"）
+- ❌ 信息不完整的待确认事项
+- ❌ 已被更高层次条目整合的细节
+- ❌ 低价值操作记录（"发送了邮件"、"创建了文件"）
+
+# Step 3: SYNTHESIZE - For each passing group, create ONE integrated memory
+
+Combine related entries into a single, richer memory that:
+- Synthesizes information from all entries in the group
+- Captures the "why" and "how", not just "what"
+- Preserves business context and decision rationale
+
+# OUTPUT FORMAT
+Return a JSON array:
 ```json
 [
   {{
-    "type": "sqlite-vec 升级",
-    "summary": "从 Python 余弦相似度升级到 sqlite-vec 高性能向量搜索",
-    "importance": 0.9,
-    "tags": ["#tech", "#sqlite", "#optimization"],
-    "original_type": "knowledge",
-    "original_time": "13:30"
+    "type": "系统架构或业务领域的简短标签",
+    "summary": "1-2句话的精炼总结，包含核心信息和上下文",
+    "importance": 0.0-1.0,
+    "tags": ["#tag1", "#tag2"],
+    "original_time": "HH:MM (第一条原始时间)"
   }}
 ]
 ```
 
-Only include entries that have long-term value. Skip trivial content.
+# Examples:
+❌ SKIP: "明天开会"、"调研腾讯云"、"发送邮件给X"
+✅ SAVE: "MCN渠道打通：单价400元/个，视频线索业务基础设施，支持号池扩充和线索增长"
+✅ SAVE: "客服AI Bot技术选型：nanobot栈，业务痛点在召回相似度问题，架构需包含意图识别和对话管理"
+
+Remember: Quality over quantity. 3-8 high-quality memories is better than 20 trivial ones.
 """
 
     # Call Claude CLI
     cmd = [
         "claude",
         "-p", prompt,
+        "--output-format", "stream-json",
+        "--verbose",
         "--dangerously-skip-permissions"
     ]
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120
-        )
-
-        output = result.stdout
+        # Use stream mode if available, otherwise fall back to basic subprocess
+        if run_claude_stream:
+            success, output = run_claude_stream(cmd, env=None)
+            if not success:
+                print(f"❌ Claude processing failed: {output}")
+                return []
+        else:
+            # Fallback to basic subprocess mode
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            output = result.stdout
 
         # Extract JSON from output (handle markdown code blocks)
         # Try to find JSON array
@@ -350,7 +392,7 @@ def main():
 
     print(f"\n✨ Extracted {len(summaries)} long-term memories:")
     for s in summaries:
-        print(f"   - [{s['type']}] {s['summary'][:60]}...")
+        print(f"   - [{s['type']}] {s['summary']}")
 
     # Step 3: Save to database
     conn = init_db()

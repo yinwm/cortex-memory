@@ -64,7 +64,7 @@ chmod +x install.sh
 ./install.sh
 
 # 3. Verify installation
-python3 scripts/retrieve_memory.py --query "test"
+python3 init_db.py
 ```
 
 ### Basic Usage
@@ -90,7 +90,7 @@ Completed Memory system architecture design with three-phase approach: daily fil
 #### 2. Summarize to long-term memory
 
 ```bash
-python3 scripts/summarize_day.py --date 2026-02-05
+python3 skills/extract-memory/scripts/summarize_day.py --date 2026-02-05
 ```
 
 This will:
@@ -103,10 +103,10 @@ This will:
 
 ```bash
 # Semantic search
-python3 scripts/retrieve_memory.py --query "sqlite 兼容性问题"
+python3 skills/retrieve-memory/scripts/retrieve_memory.py --query "sqlite 兼容性问题"
 
 # Adjust search parameters
-python3 scripts/retrieve_memory.py --query "database" --limit 5 --semantic-weight 0.9
+python3 skills/retrieve-memory/scripts/retrieve_memory.py --query "database" --limit 5 --semantic-weight 0.9
 ```
 
 ---
@@ -122,7 +122,7 @@ import json
 def retrieve_memories(query: str, limit: int = 10):
     """Retrieve relevant memories for agent context"""
     result = subprocess.run(
-        ["python3", "scripts/retrieve_memory.py",
+        ["python3", "skills/retrieve-memory/scripts/retrieve_memory.py",
          "--query", query, "--limit", str(limit)],
         capture_output=True,
         text=True
@@ -175,7 +175,7 @@ docker-compose up -d
 ```bash
 # Use a different Ollama model
 export OLLAMA_MODEL=mxbai-embed-large
-python3 scripts/summarize_day.py --date 2026-02-05
+python3 skills/extract-memory/scripts/summarize_day.py --date 2026-02-05
 ```
 
 ### Multi-Device Sync
@@ -210,7 +210,7 @@ pip install -e ".[dev]"
 pytest tests/
 
 # Format code
-black scripts/ tests/
+black skills/ tests/
 ```
 
 ---
